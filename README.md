@@ -40,7 +40,7 @@ Finally, we can test whether `tensorflow` is correctly installed and can access 
 ```
 python3 -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
 ```
-*<sub>This command is included in `test_gpu.sh`.</sub>*
+*<sub>This command is included in [`test_gpu.sh`](test_gpu.sh).</sub>*
 
 The correct output should be something like:
 
@@ -69,7 +69,7 @@ From there, the most important warning is: `TF-TRT Warning: Could not find Tenso
 ```
 strace -e open,openat python -c "import tensorflow as tf" 2>&1 | grep "libnvinfer\|TF-TRT"
 ```
-*<sub>This command is included in `strace_tensorrt.sh`.</sub>*
+*<sub>This command is included in [`strace_tensorrt.sh`](strace_tensorrt.sh).</sub>*
 
 This will print something like the following:
 
