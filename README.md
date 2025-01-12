@@ -23,7 +23,14 @@ According to [this thread](https://github.com/tensorflow/tensorflow/issues/61986
 python -m pip install "tensorflow[and-cuda]==2.15" --extra-index-url https://pypi.nvidia.com
 ```
 ### Fixes
-Pending
+After that, we can install `nvidia-tensorrt` if not already installed by running: `pip install nvidia-tensorrt`. 
+
+Then, we can run:
+
+```
+./setup_envars.sh
+python create_symlinks.py
+```
 
 ### Explanation
 After installing `tensorflow`, it will probably print something like the following after running `import tensorflow`:
