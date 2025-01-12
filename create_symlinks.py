@@ -95,6 +95,11 @@ def create_sudo_symlink(link_path: Path, target_path: Path) -> bool:
         # First try creating the symlink directly
         link_path.symlink_to(target_path)
         return True
+    except FileExistsError:
+        # If the file already exists, remove it and create the symlink
+        remove_sudo_symlink(link_path)
+        create_sudo_symlink(link_path, target_path)
+        return True
     except PermissionError:
         try:
             # If permission denied, try using sudo
@@ -244,7 +249,6 @@ def check_and_create_symlinks(
 
         # Make sure symlinks_to_path exists
         if not symlinks_to_path.exists():
-            print(target_file, "TELA")
             print_log(f"File to symlink to not found: {ppath(symlinks_to_path)}, skipping.", "ERROR")
             continue
 
@@ -272,7 +276,7 @@ def check_and_create_symlinks(
                 link_path.unlink()
 
         # Check if the symlink is a broken link
-        if not os.path.exists(os.readlink(link_path)):
+        if os.path.exists(link_path) and not os.path.exists(os.readlink(link_path)):
             print_log(f"Broken symlink found: {ppath(link_path)}, removing it", "WARN")
             if not remove_sudo_symlink(link_path):
                 print_log(f"Failed to remove broken symlink: {ppath(link_path)}", "ERROR")
