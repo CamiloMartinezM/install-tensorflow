@@ -1,0 +1,1 @@
+strace -e open,openat python -c "import tensorflow as tf" 2>&1 | grep "libnvinfer\|TF-TRT"
