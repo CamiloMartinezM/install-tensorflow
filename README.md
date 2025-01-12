@@ -31,6 +31,25 @@ Then, we can run:
 ./setup_envars.sh
 python create_symlinks.py
 ```
+Where:
+* `setup_envars.sh` sets the environment variables `$LD_LIBRARY_PATH` and `$PATH` to include the necessary paths for `tensorrt_libs`, `CUDA` and `cudnn`.
+* `create_symlinks.py` creates the necessary symlinks for the `tensorrt_libs` folder.
+
+Finally, we can test whether `tensorflow` is correctly installed and can access the GPU as well as `tensorrt` by running the following command:
+
+```
+python3 -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
+```
+*<sub>This command is included in `test_gpu.sh`.</sub>*
+
+The correct output should be something like:
+
+```
+2025-01-12 13:17:52.565350: I tensorflow/core/util/port.cc:113] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2025-01-12 13:17:52.604063: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX512F AVX512_VNNI AVX512_BF16 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+[PhysicalDevice(name='/physical_device:GPU:0', device_type='GPU')]
+```
 
 ### Explanation
 After installing `tensorflow`, it will probably print something like the following after running `import tensorflow`:
@@ -50,6 +69,7 @@ From there, the most important warning is: `TF-TRT Warning: Could not find Tenso
 ```
 strace -e open,openat python -c "import tensorflow as tf" 2>&1 | grep "libnvinfer\|TF-TRT"
 ```
+*<sub>This command is included in `strace_tensorrt.sh`.</sub>*
 
 This will print something like the following:
 
