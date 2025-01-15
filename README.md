@@ -16,6 +16,7 @@ conda activate tensorflow
 
 conda install cudnn=8.9
 ```
+**Note:** You can check the `CUDA` and `cudnn` package versions compatible with each tensorflow version [here](https://www.tensorflow.org/install/source?hl=en#gpu).
 
 ## Installation
 According to [this thread](https://github.com/tensorflow/tensorflow/issues/61986#issuecomment-1811284728), as of the tensorflow release `2.15`, it will successfully install using:
