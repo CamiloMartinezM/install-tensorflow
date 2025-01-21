@@ -1,6 +1,56 @@
 # install-tensorflow
 
-## Setup
+- [install-tensorflow](#install-tensorflow)
+  - [Automated Setup](#automated-setup)
+  - [Minimal Setup](#minimal-setup)
+  - [Installation](#installation)
+    - [Fixes](#fixes)
+    - [Explanation](#explanation)
+  - [Additional Notes](#additional-notes)
+    - [Installation of `cuda-toolkit`](#installation-of-cuda-toolkit)
+  - [References](#references)
+
+## Automated Setup 
+
+For Python `3.12` and `tensorflow-2.16`, we can run the following commands:
+
+```
+conda create --name tf-2.16 python=3.12
+conda activate tf-2.16
+conda install nvidia/label/cuda-12.3.0::cuda-toolkit -c nvidia/label/cuda-12.3.0
+conda install -c nvidia cudnn=8.9 cuda-version=12.3
+pip install "tensorflow[and-cuda]==2.16.1"
+
+export NVIDIA_DIR=$(dirname $(dirname $(python -c "import nvidia.cudnn;print(nvidia.cudnn.__file__)")))
+export LD_LIBRARY_PATH_ADDITIONS=$(echo ${NVIDIA_DIR}/*/lib/ | sed -r 's/\s+/:/g')${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+
+conda env config vars set LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH_ADDITIONS
+conda env config vars set XLA_FLAGS=--xla_gpu_cuda_data_dir=$CONDA_PREFIX
+
+conda deactivate 
+conda activate tf-2.16
+
+pip install nvidia-tensorrt
+```
+
+After that, we need to create the symlinks as explained in the [Installation](#installation) section.
+
+To automate this, I created the script [`setup_environment.sh`](setup_environment.sh) which can be run with arguments to create a conda environment with specific `python`, `tensorflow`, `cudnn` and `CUDA` versions like this:
+
+```
+./setup_environment.sh \
+    --env-name tf-2.16 \
+    --python-version 3.12 \
+    --cuda-version 12.3.0 \
+    --cudnn-version 8.9 \
+    --tf-version 2.16.1
+```
+
+It can also be run by itself, as it has the default arguments to create a conda environment named `tf-2.16` and install `tensorflow-2.16` with `python-3.12`, and the corresponding compatible versions of `CUDA` and `cudnn`. 
+
+That same command is in [`setup_environment_tf-2.16.sh`](setup_environment_tf-2.16.sh) for convenience. The scripts [`setup_environment_tf-2.17.sh`](setup_environment_tf-2.17.sh) and [`setup_environment_tf-2.18.sh`](setup_environment_tf-2.18.sh) were created for the same purpose.
+
+## Minimal Setup
 According to [this thread](https://github.com/tensorflow/tensorflow/issues/63109#issuecomment-2543966974):
 
 ```
@@ -16,11 +66,26 @@ conda activate tensorflow
 
 conda install cudnn=8.9
 ```
+You can check the `CUDA` and `cudnn` package versions compatible with each tensorflow version [here](https://www.tensorflow.org/install/source?hl=en#gpu).
+
+After this, we would need to install `tensorflow` and `nvidia-tensorrt` as explained in the [Installation](#installation) section.
+
+**Note:** Eventhough this setup works and allows for GPU usage, it gets the following warnings:
+
+```
+E external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:9261] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:607] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+E external/local_xla/xla/stream_executor/cuda/cuda_blas.cc:1515] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+```
 
 ## Installation
 According to [this thread](https://github.com/tensorflow/tensorflow/issues/61986#issuecomment-1811284728), as of the tensorflow release `2.15`, it will successfully install using:
 ```
 python -m pip install "tensorflow[and-cuda]==2.15" --extra-index-url https://pypi.nvidia.com
+```
+Or for `2.16`:
+```
+python -m pip install "tensorflow[and-cuda]==2.16" --extra-index-url https://pypi.nvidia.com
 ```
 ### Fixes
 After that, we can install `nvidia-tensorrt` if not already installed by running: `pip install nvidia-tensorrt`. 
@@ -99,10 +164,19 @@ After that, running the `strace` command again sometimes still gives `-1` errors
 /miniconda3/envs/tf-2.16/lib/python3.10/site-packages/tensorrt_libs/libnvinfer_plugin.so.8.6.1 -> /home/camilo/miniconda3/envs/tf-2.16/lib/python3.10/site-packages/tensorrt_libs/libnvinfer_plugin.so.8
 ```
 
+## Additional Notes
+
+### Installation of `cuda-toolkit`
+Thanks to [this answer](https://stackoverflow.com/questions/78484090/conda-cuda12-incompatibility), to install a specific version of `cuda-toolkit` in a `conda` environment, we can run the following command e.g. for `cuda-12.3.0`:
+
+```
+conda install nvidia/label/cuda-12.3.0::cuda-toolkit -c nvidia/label/cuda-12.3.0
+```
+
 ## References
 * StackOverflow. [Cuda 12 + `tf-nightly 2.12`: Could not find cuda drivers on your machine, GPU will not be used, while every checking is fine and in torch it works](https://stackoverflow.com/questions/75614728/cuda-12-tf-nightly-2-12-could-not-find-cuda-drivers-on-your-machine-gpu-will).
 * Tensorflow Issue Thread. [TF-TRT Warning: Could not find TensorRT #61468](https://github.com/tensorflow/tensorflow/issues/61468)
 * Tensorflow Issue Thread. [TensorFlow `2.10.0` not compatible with TensorRT `8.4.3` #57679](https://github.com/tensorflow/tensorflow/issues/57679)
 * Tensorflow Issue Thread. [`tensorrt==8.5.3.1` from `[and-cuda]` not available in Python `3.11` #61986](https://github.com/tensorflow/tensorflow/issues/61986)
 * Tensorflow Issue Thread. [WSL2 - TensorFlow Install Issue Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered](https://github.com/tensorflow/tensorflow/issues/63109)
-
+* Tensorflow Issue Thread. [TF 2.17.0 RC0 Fails to work with GPUs (and TF 2.16 too) #63362](https://github.com/tensorflow/tensorflow/issues/63362#issuecomment-2016019354)

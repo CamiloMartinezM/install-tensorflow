@@ -29,11 +29,11 @@ CHECK_VERSION = False
 GREEN = "\033[1;32m"  # Bold green
 RED = "\033[1;31m"  # Bold red
 YELLOW = "\033[1;33m"  # Bold yellow
-BLUE = "\033[36m"  # Actually cyan/light blue which is often more readable than deep blue
+BLUE = "\033[34m"  # Actually cyan/light blue which is often more readable than deep blue
 RESET = "\033[0m"  # Reset color and style
 
 # Larger, bold stylized symbols with colors
-INFO = f"{GREEN}🛈{RESET}"  # Large information symbol
+INFO = f"{BLUE}🛈{RESET}"  # Large information symbol
 ERROR = f"{RED}✘{RESET}"  # Large X symbol
 WARN = f"{YELLOW}⚠{RESET}"  # Large warning symbol
 
@@ -296,9 +296,11 @@ def main():
     if not CONDA_PREFIX:
         print_log("CONDA_PREFIX is not set. Activate your conda environment and try again.", "ERROR")
         sys.exit(1)
+    else:
+        print_log(f"CONDA environment: {CONDA_PREFIX}", "INFO")
 
     # Target directories to create symlinks in
-    target_dirs = [TENSORRT_LIBS_PATH, NVIDIA_CUDNN_PATH, CUDA_PATH]
+    target_dirs = [TENSORRT_LIBS_PATH, NVIDIA_CUDNN_PATH] #, CUDA_PATH]
 
     # Run the strace command and parse required libraries
     try:
