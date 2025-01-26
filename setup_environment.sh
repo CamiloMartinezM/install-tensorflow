@@ -106,9 +106,9 @@ check_command "XLA flags configuration"
 # Install cuDNN
 # conda install "cudnn=$CUDNN_VERSION" "cuda-version=$CUDA_MAJOR_MINOR" -y
 conda config --remove channels nvidia
-conda install -c nvidia cudnn=9.3 cuda-version=12.5 -y || {
+conda install -c nvidia "cudnn=$CUDNN_VERSION" "cuda-version=$CUDA_MAJOR_MINOR" -y || {
     echo -e "\033[33m⚠\033[0m \033[1mWARN\033[0m: Failed to install cuDNN using NVIDIA channel, trying conda-forge"
-    conda install -c conda-forge cudnn=9.3 cuda-version=12.5 -y || {
+    conda install -c conda-forge "cudnn=$CUDNN_VERSION" "cuda-version=$CUDA_MAJOR_MINOR" -y || {
         echo -e "\033[33m⚠\033[0m \033[1mWARN\033[0m: Failed to install cuDNN using conda-forge, continuing anyway"
         check_command "cuDNN=$CUDNN_VERSION with cuda-version=$CUDA_MAJOR_MINOR installation"
     }
