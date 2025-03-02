@@ -93,7 +93,7 @@ check_command "CONDA environment $ENV_NAME activation"
 # conda install cuda "nvidia/label/cuda-$CUDA_VERSION::cuda-toolkit" -c "nvidia/label/cuda-$CUDA_VERSION" -y
 conda install "nvidia/label/cuda-$CUDA_VERSION::cuda-toolkit" -c "nvidia/label/cuda-$CUDA_VERSION" -y || {
     echo -e "\033[33m⚠\033[0m \033[1mWARN\033[0m: CUDA toolkit installation failed, continuing anyway"
-    check_command "cuda-toolkit=$CUDA_VERSION installation"
+    # check_command "cuda-toolkit=$CUDA_VERSION installation"
 }
 
 # Set XLA flags
@@ -110,16 +110,18 @@ conda install -c nvidia "cudnn=$CUDNN_VERSION" "cuda-version=$CUDA_MAJOR_MINOR" 
     echo -e "\033[33m⚠\033[0m \033[1mWARN\033[0m: Failed to install cuDNN using NVIDIA channel, trying conda-forge"
     conda install -c conda-forge "cudnn=$CUDNN_VERSION" "cuda-version=$CUDA_MAJOR_MINOR" -y || {
         echo -e "\033[33m⚠\033[0m \033[1mWARN\033[0m: Failed to install cuDNN using conda-forge, continuing anyway"
-        check_command "cuDNN=$CUDNN_VERSION with cuda-version=$CUDA_MAJOR_MINOR installation"
+        # check_command "cuDNN=$CUDNN_VERSION with cuda-version=$CUDA_MAJOR_MINOR installation"
     }
 }
 
+# Upgrade pip
+pip install --upgrade pip setuptools wheel 
+
 # Install TensorFlow
-pip install "tensorflow[and-cuda]==$TF_VERSION"
+pip install "tensorflow[and-cuda]==$TF_VERSION" --extra-index-url https://pypi.nvidia.com
 check_command "tensorflow[and-cuda]=$TF_VERSION installation"
 
 # Install TensorRT
-pip install --upgrade pip setuptools wheel 
 pip install nvidia-pyindex
 pip install nvidia-tensorrt tensorrt --extra-index-url https://pypi.nvidia.com
 check_command "TensorRT installation"
