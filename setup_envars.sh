@@ -92,9 +92,11 @@ fi
 # Write the activation script only if we found at least one path
 if [ -n "$LD_LIBRARY_PATH" ]; then
     echo -e "\033[34m🛈\033[0m \033[1mINFO\033[0m: New LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
+    echo -e "\033[34m🛈\033[0m \033[1mINFO\033[0m: New XLA_FLAGS=--xla_gpu_cuda_data_dir=$CONDA_PREFIX"
     cat > "$ACTIVATE_SCRIPT" << EOF
 #!/bin/sh
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH"
+export XLA_FLAGS="--xla_gpu_cuda_data_dir=$CONDA_PREFIX"
 EOF
 
     # Make the script executable
