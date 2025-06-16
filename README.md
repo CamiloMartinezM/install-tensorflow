@@ -6,6 +6,7 @@
   - [Installation](#installation)
     - [Fixes](#fixes)
     - [Explanation](#explanation)
+    - [Manual Setup](#manual-setup)
   - [Additional Notes](#additional-notes)
     - [Installation of `cuda-toolkit`](#installation-of-cuda-toolkit)
   - [References](#references)
@@ -162,6 +163,25 @@ After that, running the `strace` command again sometimes still gives `-1` errors
 ```
 /miniconda3/envs/tf-2.16/lib/python3.10/site-packages/tensorrt_libs/libnvinfer.so.8.6.1 -> /home/camilo/miniconda3/envs/tf-2.16/lib/python3.10/site-packages/tensorrt_libs/libnvinfer.so.8
 /miniconda3/envs/tf-2.16/lib/python3.10/site-packages/tensorrt_libs/libnvinfer_plugin.so.8.6.1 -> /home/camilo/miniconda3/envs/tf-2.16/lib/python3.10/site-packages/tensorrt_libs/libnvinfer_plugin.so.8
+```
+
+### Manual Setup
+If you are still getting a similar error to the following, after executing `import tensorflow`:
+
+```
+2025-06-16 16:25:17.192168: I tensorflow/core/platform/cpu_feature_guard.cc:193] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F AVX512_VNNI AVX512_BF16 FMA
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2025-06-16 16:25:17.270001: I tensorflow/core/util/util.cc:169] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2025-06-16 16:25:17.293116: E tensorflow/stream_executor/cuda/cuda_blas.cc:2981] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2025-06-16 16:25:17.644286: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libnvinfer.so.7'; dlerror: libnvinfer.so.7: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: $ENV_PATH/lib:$ENV_PATH/lib/python3.10/site-packages/tensorrt_libs:/usr/local/cuda/lib64
+2025-06-16 16:25:17.644343: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libnvinfer_plugin.so.7'; dlerror: libnvinfer_plugin.so.7: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: $ENV_PATH/lib:$ENV_PATH/lib/python3.10/site-packages/tensorrt_libs:/usr/local/cuda/lib64
+2025-06-16 16:25:17.644352: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Cannot dlopen some TensorRT libraries. If you would like to use Nvidia GPU with TensorRT, please make sure the missing libraries mentioned above are installed properly.
+```
+You may try to manually create the symlinks for the missing files, that is, go to the `tensorrt_libs` folder in your environment (e.g., `$ENV_PATH/lib:$ENV_PATH/lib/python3.10/site-packages/tensorrt_libs`), and find the files you do have. For example, if you are missing `libnvinfer.so.7` and `libnvinfer_plugin.so.7`, like in the previous error, but when you go to that folder, you find there exist `libnvinfer.so.10` and `libnvinfer_plugin.so.10`, you can run:
+
+```bash
+ln -s libnvinfer.so.10 libnvinfer.so.7
+ln -s libnvinfer_plugin.so.10 libnvinfer_plugin.so.7
 ```
 
 ## Additional Notes
