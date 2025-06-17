@@ -14,15 +14,23 @@ SHOW_TARGET_CONTENTS = False
 PYTHON_VERSION = ".".join(map(str, sys.version_info[:2]))
 
 # Get the conda prefix from the environment variable
-CONDA_PREFIX = os.environ.get("CONDA_PREFIX")
+# Try to get it from CONDA_PREFIX, otherwise use VIRTUAL_ENV
+CONDA_PREFIX = os.environ.get("VIRTUAL_ENV")
+if not CONDA_PREFIX:
+    CONDA_PREFIX = os.environ.get("CONDA_PREFIX")
 
 # Define the target and link names
-TENSORRT_LIBS_PATH = os.path.join(CONDA_PREFIX, f"lib/python{PYTHON_VERSION}/site-packages/tensorrt_libs")
-NVIDIA_CUDNN_PATH = os.path.join(CONDA_PREFIX, f"lib/python{PYTHON_VERSION}/site-packages/nvidia/cudnn/lib")
+TENSORRT_LIBS_PATH = os.path.join(
+    CONDA_PREFIX, f"lib/python{PYTHON_VERSION}/site-packages/tensorrt_libs"
+)
+NVIDIA_CUDNN_PATH = os.path.join(
+    CONDA_PREFIX, f"lib/python{PYTHON_VERSION}/site-packages/nvidia/cudnn/lib"
+)
 CUDA_PATH = "/usr/local/cuda/lib64/"
 
 # Check the version of the library before creating the symlink
-# If set to False, a symlink could be created such that libnvinfer_plugin.so.8.6.1 points to libnvinfer_plugin.so.10
+# If set to False, a symlink could be created such that libnvinfer_plugin.so.8.6.1 points
+# to libnvinfer_plugin.so.10
 CHECK_VERSION = False
 
 # ANSI escape codes for colors and styling
@@ -71,7 +79,9 @@ def ppath(path: Path | str, color=True, override_long=False) -> str:
     For example: `/home/user/anaconda3/lib/python3.8/site-packages/tensorrt_libs/file -> tensorrt_libs/file`
     """
     if not SHOW_COMPLETE_PATHS and not override_long:
-        shortened = str(path).replace(os.path.join(CONDA_PREFIX, f"lib/python{PYTHON_VERSION}/site-packages/"), "")
+        shortened = str(path).replace(
+            os.path.join(CONDA_PREFIX, f"lib/python{PYTHON_VERSION}/site-packages/"), ""
+        )
     else:
         shortened = str(path)
     return f"{BLUE}{shortened}{RESET}" if color else shortened
@@ -148,53 +158,65 @@ def remove_sudo_symlink(link_path: Path) -> bool:
 def parse_required_libs(strace_output):
     """Parse strace output to find missing TensorRT libraries."""
     libs = set()
-    pattern = r"openat\(.*?libnvinfer(.*?)\.so\.(\d+\.\d+\.\d+)"
+    # Corrected Pattern:
+    # - Captures the full library name 'libnvinfer....so.X' directly.
+    # - (?:_plugin)? is a non-capturing group to optionally match '_plugin'.
+    # - \.so\.(\d+) matches '.so.' followed by one or more digits (like '7').
+    pattern = r"(libnvinfer(?:_plugin)?\.so\.\d+)"
+
     for line in strace_output.splitlines():
+        # We search for the pattern. The 'openat' part is not strictly necessary
+        # if we just want the library name.
         match = re.search(pattern, line)
         if match:
-            lib_name = f"libnvinfer{match.group(1)}.so.{match.group(2)}"
+            # The entire matched library name is in group 0 or 1 depending on the pattern.
+            # Since we put the whole thing in parentheses, it's in group 1.
+            lib_name = match.group(1)
             libs.add(lib_name)
-    return list(libs)
+
+    return sorted(list(libs))  # Sorting for consistent output
 
 
-def find_matching_file(directory: str, file_basename: str, file_version: str, check_version=CHECK_VERSION) -> str:
-    """Find a matching file in the directory based on the basename and version. For example, if the file_basename is
-    `libnvinfer.so.` and file_version is `8`, it will search for `libnvinfer.so.8` in the `directory`.
-    If `check_version` is set to False, it will return the first file that matches the basename."""
-    found_file = None
+def find_matching_file(
+    directory: str, file_basename: str, file_version: str, check_version=CHECK_VERSION
+) -> str | None:
+    """Find a matching file in the directory based on the basename and version."""
+    if not os.path.exists(directory):
+        return None
+
     for f in os.listdir(directory):
-        if f.startswith(file_basename):
-            available_version = f.split(".")[2]  # Extract major version, e.g., libnvinfer.so.8.6.1 -> 8
-            # Versions must match, otherwise prints an ERROR
-            if available_version == file_version or not check_version:
-                if available_version != file_version:
-                    print_log(
-                        f"Version mismatch for {file_basename}: Found {available_version}, expected {file_version}",
-                        "WARN",
-                        end="",
-                    )
-                    if check_version:
-                        print_log(f" skipping since {YELLOW}CHECK_VERSION{RESET} is enabled.", "")
-                        break
-                    else:
-                        print_log(f", but continuing since {YELLOW}CHECK_VERSION{RESET} is disabled.", "")
+        # Use regex to safely find files that start with the base name and get their major version
+        # e.g., match 'libnvinfer.so.8' from 'libnvinfer.so.8.6.1'
+        match = re.match(f"^{re.escape(file_basename)}({file_version}\\..*)", f)
+        if match:
+            # Check for broken symlinks
+            full_path = os.path.join(directory, f)
+            if os.path.islink(full_path) and not os.path.exists(full_path):
+                continue
+            return f  # Return the first valid match
 
-                found_file = f
-                break
-
-    # Check that the found file is not a symlink, and if it is, then it must not be broken
-    if (
-        found_file
-        and os.path.islink(os.path.join(directory, found_file))
-        and not os.path.exists(os.path.join(directory, found_file))
-    ):
-        found_file = None
-
-    return found_file
+    # If check_version is disabled, we can be more lenient
+    if not check_version:
+        for f in os.listdir(directory):
+            if f.startswith(file_basename):
+                # Check for broken symlinks
+                full_path = os.path.join(directory, f)
+                if os.path.islink(full_path) and not os.path.exists(full_path):
+                    continue
+                print_log(
+                    f"Version mismatch for {file_basename + file_version}: Found {f}, but "
+                    "continuing since CHECK_VERSION is disabled.",
+                    "WARN",
+                )
+                return f
+    return None
 
 
 def check_and_create_symlinks(
-    missing_libs: list[str], target_dir: str, tensorrt_libs_as_default=False, check_version=CHECK_VERSION
+    missing_libs: list[str],
+    target_dir: str,
+    tensorrt_libs_as_default=False,
+    check_version=CHECK_VERSION,
 ) -> list[tuple[Path, Path]]:
     """Create symlinks to the files in `missing_libs` in the `target_dir`.
 
@@ -218,13 +240,17 @@ def check_and_create_symlinks(
     """
     created_links = []
     for lib in missing_libs:
-        lib_base = re.match(r"(lib.+\.so\.)\d+\.\d+\.\d+", lib)
-        if not lib_base:
-            print_log(f"Invalid library format: {lib}", "ERROR")
+        # Corrected Regex:
+        # ^(lib.+?\.so\.)  -> Captures the base name, e.g., "libnvinfer.so."
+        # (\d+)            -> Captures the major version number, e.g., "7" or "8"
+        # The rest of the version string (e.g., ".6.1") is ignored, which is fine.
+        match = re.match(r"^(lib.+?\.so\.)(\d+)", lib)
+        if not match:
+            print_log(f"Could not parse library format: {lib}", "ERROR")
             continue
 
-        lib_base_name = lib_base.group(1)
-        lib_version = lib.split(".")[2]
+        lib_base_name = match.group(1)  # e.g., 'libnvinfer.so.'
+        lib_version = match.group(2)  # e.g., '7'
         target_file = None
         source_dir = target_dir
 
@@ -233,7 +259,9 @@ def check_and_create_symlinks(
 
         # If no matching file found in the target directory, default to TensorRT libs path
         if not target_file:
-            print_log(f"Could not find a matching file for {lib} in {ppath(target_dir)}", "WARN", end="")
+            print_log(
+                f"Could not find a matching file for {lib} in {ppath(target_dir)}", "WARN", end=""
+            )
 
             if tensorrt_libs_as_default:
                 print_log(f", defaulting to {ppath(TENSORRT_LIBS_PATH)} path.", "")
@@ -245,18 +273,23 @@ def check_and_create_symlinks(
 
         # Create symbolic link
         link_path = Path(target_dir) / lib  # This is the missing link path
-        symlinks_to_path = Path(source_dir) / target_file  # This is the path to the file to be linked
+        symlinks_to_path = (
+            Path(source_dir) / target_file
+        )  # This is the path to the file to be linked
 
         # Make sure symlinks_to_path exists
         if not symlinks_to_path.exists():
-            print_log(f"File to symlink to not found: {ppath(symlinks_to_path)}, skipping.", "ERROR")
+            print_log(
+                f"File to symlink to not found: {ppath(symlinks_to_path)}, skipping.", "ERROR"
+            )
             continue
 
         # Check if the symlink already exists and is correct
         if link_path.exists():
             if link_path.is_symlink() and os.readlink(link_path) == str(symlinks_to_path):
                 print_log(
-                    f"Symlink already exists and is correct: {ppath(link_path)} -> {ppath(symlinks_to_path)}", "INFO"
+                    f"Symlink already exists and is correct: {ppath(link_path)} -> {ppath(symlinks_to_path)}",
+                    "INFO",
                 )
                 continue
             elif (
@@ -294,18 +327,20 @@ def check_and_create_symlinks(
 
 def main():
     if not CONDA_PREFIX:
-        print_log("CONDA_PREFIX is not set. Activate your conda environment and try again.", "ERROR")
+        print_log("CONDA_PREFIX is not set. Activate your environment and try again.", "ERROR")
         sys.exit(1)
     else:
-        print_log(f"CONDA environment: {CONDA_PREFIX}", "INFO")
+        print_log(f"Environment: {CONDA_PREFIX}", "INFO")
 
     # Target directories to create symlinks in
-    target_dirs = [TENSORRT_LIBS_PATH, NVIDIA_CUDNN_PATH] #, CUDA_PATH]
+    target_dirs = [TENSORRT_LIBS_PATH, NVIDIA_CUDNN_PATH]  # , CUDA_PATH]
 
     # Run the strace command and parse required libraries
     try:
         strace_cmd = ["strace", "-e", "open,openat", "python", "-c", "import tensorflow as tf"]
-        result = subprocess.run(strace_cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+        result = subprocess.run(
+            strace_cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, text=True
+        )
         strace_output = result.stderr
     except Exception as e:
         print_log(f"Error running strace command: {e}", "ERROR")
@@ -315,8 +350,8 @@ def main():
 
     if not required_libs:
         print_log("No missing libraries found in strace output.", "ERROR")
-        print_log("Original strace output:", "INFO")
-        print_log(strace_output, "")
+        print_log("Original strace output [-1000:]:", "INFO")
+        print_log(strace_output[-1000:], "")
         return
 
     print_log(f"Required libraries to link: {required_libs}", "INFO")
@@ -328,7 +363,9 @@ def main():
             print_log(f"Target directory does not exist: {ppath(target_dir)}", "ERROR")
             continue
 
-        created_links = check_and_create_symlinks(required_libs, target_dir, tensorrt_libs_as_default=True)
+        created_links = check_and_create_symlinks(
+            required_libs, target_dir, tensorrt_libs_as_default=True
+        )
         if created_links:
             print_log("Summary of created symlinks:", "INFO")
             for link, target in created_links:

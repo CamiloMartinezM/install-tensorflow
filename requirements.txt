@@ -1,0 +1,29 @@
+# Core dependencies
+numpy<2.0
+setuptools
+wheel
+
+# TensorFlow with CUDA support
+tensorflow[and-cuda]==2.10
+
+# NVIDIA TensorRT support
+nvidia-pyindex
+nvidia-tensorrt
+tensorrt
+
+# Additional NVIDIA libraries for CUDA 11
+nvidia-cublas-cu11
+nvidia-cuda-cupti-cu11
+nvidia-cuda-nvrtc-cu11
+nvidia-cuda-runtime-cu11
+nvidia-cudnn-cu11
+nvidia-cufft-cu11
+nvidia-curand-cu11
+nvidia-cusolver-cu11
+nvidia-cusparse-cu11
+nvidia-cusparselt-cu12
+nvidia-nccl-cu11
+nvidia-nvjitlink-cu12
+nvidia-nvtx-cu11
+
+# Additional index URLs (use with pip install -r requirements.txt --extra-index-url https://pypi.nvidia.com)
