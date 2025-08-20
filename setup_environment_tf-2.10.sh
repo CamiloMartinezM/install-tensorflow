@@ -4,4 +4,4 @@
     --cuda-version 11.2 \
     --cudnn-version 8.1 \
     --tf-version 2.10.1 \
-    --env-manager conda
+    --env-manager micromamba

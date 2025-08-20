@@ -4,10 +4,10 @@
 # GLOBALS                                                                       #
 #################################################################################
 
-PROJECT_NAME = tf-2.10-pip
+PROJECT_NAME = tf-2.10
 PYTHON_VERSION = 3.10
 PYTHON_INTERPRETER = /usr/bin/python${PYTHON_VERSION}
-VENV_PATH = $$HOME/.virtualenvs/$(PROJECT_NAME)/bin
+VENV_PATH = /CT/eeg-3d-face/work/.virtualenvs/$(PROJECT_NAME)/bin
 SETUP_ENVIRONMENT_VARIABLES_SCRIPT = setup_envars_virtualenvwrapper.sh
 
 #################################################################################
